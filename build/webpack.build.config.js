@@ -13,11 +13,11 @@ const buildWebpackConfig = merge(baseWebpackConfig, {
     }
   },
   plugins: [
-    new CopyWebpackPlugin({
-      patterns: [
-        { from: baseWebpackConfig.externals.paths.static, to: path.join(__dirname, '../dist/static') }
-      ]
-    }),
+    // new CopyWebpackPlugin({
+    //   patterns: [
+    //     { from: baseWebpackConfig.externals.paths.static, to: path.join(__dirname, '../dist/static') }
+    //   ]
+    // }),
     new HtmlWebpackPlugin({
       hash: false,
       template: './src/index.html',

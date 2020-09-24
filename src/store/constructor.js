@@ -20,9 +20,18 @@ export default {
     ],
     types_data: ['number', 'string', 'bool'],
     types_map: {
-      number: ['gt', 'lt', 'gte', 'lte', 'eg', 'neq'],
-      string: ['like', 'eq', 'neq'],
-      bool: ['eq']
+      number: {
+        name: 'Число',
+        condition: ['gt', 'lt', 'gte', 'lte', 'eg', 'neq']
+      },
+      string: {
+        name: 'Строка',
+        condition: ['like', 'eq', 'neq']
+      },
+      bool: {
+        name: 'Булево значение',
+        condition: ['eq']
+      }
     }
   },
   mutations: {
@@ -76,6 +85,9 @@ export default {
     },
     getTypesData: (state) => {
       return state.types_data;
+    },
+    getConditionData: state => _id => {
+      return state.types_map[_id] || {};
     }
   }
 }

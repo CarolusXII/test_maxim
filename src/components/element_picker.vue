@@ -28,7 +28,6 @@
     import sup_func from "../additional/sup_func";
 
     export default {
-        mixins: [sup_func],
         model: {
             prop: 'selected_items_init',
             event: 'change-selected-items'

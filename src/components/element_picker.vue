@@ -13,6 +13,7 @@
             >
               <span>{{ item[item_text] }}</span>
               <v-spacer></v-spacer>
+              <slot name="info" :item="item"></slot>
               <slot name="action" :item="item"></slot>
             </v-row>
           </template>
@@ -24,7 +25,7 @@
 </template>
 
 <script>
-    import sup_func from "../mixins/sup_func";
+    import sup_func from "../additional/sup_func";
 
     export default {
         mixins: [sup_func],
@@ -72,10 +73,10 @@
                     }
                 }
                 if (flag) {
-                    this.selected_items = this.getIntersectionArray(this.selected_items, val, this.item_value);
+                    this.selected_items = this.$sup_func.getIntersectionArray(this.selected_items, val, this.item_value);
                 }
             },
-            selected_items(val) {console.log(1)
+            selected_items(val) {
                 this.$emit('change-selected-items', val);
             }
         },
@@ -96,6 +97,7 @@
     .element-picker__item {
       padding: 4px 8px;
       cursor: pointer;
+      height: 40px;
 
       &.element-picker__item--selected {
         background-color: #ebebeb;
@@ -103,6 +105,7 @@
 
       span {
         user-select: none;
+        font-size: 18px;
       }
     }
   }

@@ -1,6 +1,5 @@
 <template>
-  <v-col class="xs12">
-
+  <v-col cols="12" sm="12" md="10" lg="8" v-resize="resize">
     <v-dialog
       v-model="modal_edit_json_data.modal"
       max-width="800"
@@ -12,7 +11,7 @@
           <v-row class="justify-end">
             <v-col class="fix-flex">
               <v-btn
-                @click="showModalEditJsonElement"
+                @click="showModalEditJsonElement()"
               >Добавить элемент в массив
               </v-btn>
             </v-col>
@@ -131,7 +130,29 @@
         <v-card-text>
           <v-col class="12">
             <v-row>
-              
+              <v-select
+                label="Условия"
+                :items="filtered_condition"
+                :value="edit_settings.data.value ? Object.keys(edit_settings.data.value) : []"
+                @change="v => selectCondition(v)"
+                multiple
+              ></v-select>
+            </v-row>
+            <v-row v-for="(condition, key) in edit_settings.data.value" :key="key">
+              <v-text-field
+                v-if="edit_settings.data.type === 'number' || edit_settings.data.type === 'string'"
+                :label="key"
+                v-model="edit_settings.data.value[key]"
+                :type="edit_settings.data.type === 'number' ? 'number' : 'text'"
+              ></v-text-field>
+              <v-checkbox
+                v-else
+                :label="key"
+                on-icon="done"
+                off-icon=""
+                mandatory
+                v-model="edit_settings.data.value[key]"
+              ></v-checkbox>
             </v-row>
             <v-row>
               <v-spacer></v-spacer>
@@ -142,13 +163,78 @@
                   <v-icon>clear</v-icon>
                 </v-btn>
               </v-col>
+              <v-col class="fix-flex">
+                <v-btn
+                  @click="saveSettings"
+                >
+                  <v-icon>done</v-icon>
+                </v-btn>
+              </v-col>
             </v-row>
           </v-col>
         </v-card-text>
       </v-card>
     </v-dialog>
-
-
+    <v-dialog
+      v-model="show_form_modal"
+      persistent
+      fullscreen
+    >
+      <v-card>
+        <v-card-title>Готовая форма</v-card-title>
+        <v-card-text>
+          <v-form ref="form_user_interface">
+            <v-col class="xs12">
+              <v-row>
+                <v-col
+                  cols="12"
+                  sm="6"
+                  md="4"
+                  lg="2"
+                  v-for="(field, index) in $store.getters['constructor/getSelectedItems']"
+                  :key="index"
+                >
+                  <v-text-field
+                    v-if="field.type === 'string' || field.type === 'number'"
+                    :label="field.caption"
+                    :type="field.type === 'number' ? 'number' : 'text'"
+                    :rules="getRules(field)"
+                  ></v-text-field>
+                  <v-checkbox
+                    v-else
+                    :label="field.caption"
+                    on-icon="done"
+                    :rules="getRules(field)"
+                  ></v-checkbox>
+                </v-col>
+              </v-row>
+              <v-row justify="end">
+                <v-col class="fix-flex">
+                  <v-btn
+                    @click="closeModalUserInterface"
+                  >
+                    <v-icon>clear</v-icon>
+                  </v-btn>
+                </v-col>
+                <v-col class="fix-flex" ml-2>
+                  <v-btn
+                    @click="saveUserInterface"
+                  >Имитация отправки
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-col>
+          </v-form>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+    <v-snackbar
+      v-model="snackbar.model"
+      :color="snackbar.success ? 'green' : 'red'"
+    >
+      <template v-if="snackbar.success">Введенные данные успешно прошли валидацию</template>
+      <template v-else>Введенные данные не прошли валидацию</template>
+    </v-snackbar>
     <v-row>
       <v-spacer></v-spacer>
       <v-col class="fix-flex">
@@ -158,48 +244,63 @@
         </v-btn>
       </v-col>
     </v-row>
-
-
-    <v-row>
-      <v-col class="xs5">
+    <v-row justify="space-between">
+      <v-col cols="12" sm="5">
         <element-picker
           title="Все фильтры"
-          :items="getNotIntersectionArray($store.getters['constructor/getJsonData'], elements_selector.selected_items, 'code')"
+          :items="$sup_func.getNotIntersectionArray($store.getters['constructor/getJsonData'], $store.getters['constructor/getSelectedItems'], 'code')"
           v-model="elements_selector.active_items"
           item_value="code"
           item_text="caption"
         ></element-picker>
       </v-col>
-
-
       <v-col class="fix-flex">
-        <v-row>
+        <v-row class="buttons-action-wrapper">
           <v-col class="fix-flex">
             <v-btn
-              @click="elements_selector.selected_items = elements_selector.selected_items.concat(elements_selector.active_items)"
+              @click="$store.dispatch('constructor/addSelectedItems', elements_selector.active_items)"
             >
-              <v-icon>keyboard_arrow_right</v-icon>
+              <v-icon>
+                <template v-if="!mobile">keyboard_arrow_right</template>
+                <template v-else>keyboard_arrow_down</template>
+              </v-icon>
             </v-btn>
           </v-col>
           <v-col class="fix-flex">
             <v-btn
-              @click="elements_selector.selected_items = getNotIntersectionArray(elements_selector.selected_items, elements_selector.deactive_items, 'code')"
+              @click="$store.dispatch('constructor/cutSelectedItems', elements_selector.deactive_items)"
             >
-              <v-icon>keyboard_arrow_left</v-icon>
+              <v-icon>
+                <template v-if="!mobile">keyboard_arrow_left</template>
+                <template v-else>keyboard_arrow_up</template>
+              </v-icon>
             </v-btn>
           </v-col>
         </v-row>
       </v-col>
-      <v-col class="xs5">
+      <v-col cols="12" sm="5">
         <element-picker
           title="Выбранные фильтры"
-          :items="getIntersectionArray($store.getters['constructor/getJsonData'], elements_selector.selected_items, 'code')"
+          :items="$sup_func.getIntersectionArray($store.getters['constructor/getJsonData'], $store.getters['constructor/getSelectedItems'], 'code')"
           v-model="elements_selector.deactive_items"
           item_value="code"
           item_text="caption"
         >
+          <template v-slot:info="props">
+            <v-tooltip bottom v-if="Object.keys($store.getters['constructor/getSelectedItem'](props.item.code).value).length">
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon
+                  v-bind="attrs"
+                  v-on="on"
+                  class="error--text"
+                >error_outline</v-icon>
+              </template>
+              <span>У данного элемента уже заданы какие-то условия</span>
+            </v-tooltip>
+          </template>
           <template v-slot:action="props">
             <v-btn
+              class="ml-1"
               fab
               x-small
               @click.stop="showModalEditSettings(props.item)"
@@ -210,17 +311,31 @@
         </element-picker>
       </v-col>
     </v-row>
-
+    <v-row justify="end">
+      <v-col cols="12" sm="5">
+        <v-row>Общий вид генерируемого запроса</v-row>
+        <v-row>
+          {{ $store.getters['constructor/getSelectedItems'] }}
+        </v-row>
+      </v-col>
+    </v-row>
+    <v-row justify="end">
+      <v-col class="fix-flex">
+        <v-btn
+          :disabled="!$store.getters['constructor/getSelectedItems'].length"
+          @click="show_form_modal=true"
+        >Показать форму пользователя
+        </v-btn>
+      </v-col>
+    </v-row>
   </v-col>
 </template>
 
 <script>
-    import sup_func from "../mixins/sup_func";
     import ElementPicker from './element_picker.vue'
 
     export default {
         name: 'Constructor',
-        mixins: [sup_func],
         components: {
             ElementPicker
         },
@@ -228,7 +343,6 @@
             return {
                 elements_selector: {
                     active_items: [],
-                    selected_items: [],
                     deactive_items: [],
                 },
                 modal_edit_json_data: {
@@ -262,14 +376,30 @@
                     code: undefined,
                     caption: undefined,
                     type: undefined
+                },
+                show_form_modal: false,
+                snackbar: {
+                    model: false,
+                    success: false
+                },
+                mobile: false
+            }
+        },
+        computed: {
+            filtered_condition() {
+                if (this.edit_settings.data.value && !Object.keys(this.edit_settings.data.value).length) {
+                    return this.edit_settings.condition_data.condition;
+                } else {
+                    return this.edit_settings.condition_data.condition;
                 }
             }
         },
         methods: {
             init() {
                 this.$store.dispatch('constructor/getDataFromLS');
+                this.$store.dispatch('constructor/getSelectedItemsFromLS');
             },
-            showModalEditJsonElement(_data) {
+            showModalEditJsonElement(_data = undefined) {
                 if (_data) {
                     this.edit_json_data_element.title = 'Изменение данных JSON-элемента';
                     this.edit_json_data_element.data = Object.assign({}, _data);
@@ -295,19 +425,38 @@
                     } else {
                         this.$store.dispatch('constructor/updateElementInJsonData', element_data);
                     }
-                    //в случае с запросами к серверу тут должна быть обработка
                     this.closeModalEditJsonElement();
                 }
             },
             deleteJsonElement(element_data) {
-                if (confirm(`Удалить поле "${element_data.caption}"?`)) {
+                let _selected_element = this.$store.getters['constructor/getSelectedItem'](element_data.code);
+                if (confirm(`Удалить поле "${element_data.caption}"? ${_selected_element ? 'Поле уже выбрано -> его удаление приведет к его убиранию из выбранных' : ''}`)) {
                     this.$store.dispatch('constructor/deleteElementFromJsonData', element_data.code);
+                    this.$store.dispatch('constructor/cutSelectedItems', [element_data]);
                 }
             },
             showModalEditSettings(_item_data) {
-                this.edit_settings.data = Object.assign({}, _item_data);
+                this.edit_settings.data = JSON.parse(JSON.stringify(this.$store.getters['constructor/getSelectedItem'](_item_data.code)));
                 this.edit_settings.condition_data = this.$store.getters['constructor/getConditionData'](_item_data.type);
                 this.edit_settings.modal = true;
+            },
+            selectCondition(v) {
+                let not_intersection = this.$sup_func.getNotIntersectionArray(v, Object.keys(this.edit_settings.data.value));
+                for (let key in this.edit_settings.data.value) {
+                    if (!v.includes(key)) this.$delete(this.edit_settings.data.value, key);
+                }
+                not_intersection.forEach(ni => this.$set(this.edit_settings.data.value, ni, ''));
+            },
+            saveSettings() {
+                if (this.edit_settings.data.type === 'number') {
+                    for (let key in this.edit_settings.data.value) {
+                        this.edit_settings.data.value[key] = Number(this.edit_settings.data.value[key]);
+                    }
+                } else {
+                    if (this.edit_settings.data.value['eq'] === '') this.edit_settings.data.value['eq'] = false;
+                }
+                this.$store.dispatch('constructor/updateSelectedItem', this.edit_settings.data);
+                this.closeModalEditSettings();
             },
             closeModalEditSettings() {
                 this.edit_settings.modal = false;
@@ -315,6 +464,42 @@
                     this.edit_settings.data = {};
                     this.edit_settings.condition_data = {};
                 }, 300)
+            },
+            getRules(field) {
+                if (!this.show_form_modal) return;
+                let rules = [];
+                switch (field.type) {
+                    case 'number':
+                        if ('gt' in field.value) rules.push(v => v > field.value['gt'] || '');
+                        if ('lt' in field.value) rules.push(v => v < field.value['lt'] || '');
+                        if ('gte' in field.value) rules.push(v => v >= field.value['gte'] || '');
+                        if ('lte' in field.value) rules.push(v => v <= field.value['lte'] || '');
+                        if ('eq' in field.value) rules.push(v => v === field.value['eq'] || '');
+                        if ('neq' in field.value) rules.push(v => v !== field.value['neq'] || '');
+                        break;
+                    case 'string':
+                        if ('like' in field.value) rules.push(v => v ? v.includes(field.value['like']) || '' : '');
+                        if ('eq' in field.value) rules.push(v => v === field.value['eq'] || '');
+                        if ('neq' in field.value) rules.push(v => v !== field.value['neq'] || '');
+                        break;
+                    case 'bool':
+                        if ('eq' in field.value) rules.push(v => v === field.value['eq'] || '');
+                        break;
+                }
+                return rules;
+            },
+            saveUserInterface() {
+                this.snackbar.success = this.$refs.form_user_interface.validate();
+                this.snackbar.model = true;
+            },
+            closeModalUserInterface() {
+                this.show_form_modal = false;
+                setTimeout(() => {
+                    this.$refs.form_user_interface.reset();
+                }, 300)
+            },
+            resize() {
+                this.mobile = window.innerWidth < 600;
             }
         },
         mounted() {
@@ -329,6 +514,12 @@
 
     &:last-child {
       margin-left: 10px;
+    }
+  }
+
+  @media (max-width: 599px) {
+    .buttons-action-wrapper {
+      flex-wrap: nowrap!important;
     }
   }
 </style>

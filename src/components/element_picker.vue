@@ -25,7 +25,6 @@
 </template>
 
 <script>
-    import sup_func from "../additional/sup_func";
 
     export default {
         model: {
@@ -72,7 +71,7 @@
                     }
                 }
                 if (flag) {
-                    this.selected_items = this.$sup_func.getIntersectionArray(this.selected_items, val, this.item_value);
+                    this.selected_items = this.$store.getters.getIntersectionArray(this.selected_items, val, this.item_value);
                 }
             },
             selected_items(val) {
